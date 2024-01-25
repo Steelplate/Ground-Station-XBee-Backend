@@ -1,6 +1,4 @@
-from digi.xbee.devices import XBeeDevice, RemoteXBeeDevice, XBee64BitAddress, NeighborDiscoveryMode, XBeeException
-import time
-import sys
+from ground_station_device import Ground_Station_Device
 
 # Configuration for the XBee module
 PORT = "COM7"  # Serial port for local module connection
@@ -8,13 +6,14 @@ BAUD_RATE = 115200  # Baud rate for local module
 
 DEEP_SCAN_DURATION = 20  # Duration for initial deep network discovery (in seconds)
 
-DEVICES_WE_CARE_ABOUT = ["HPRC_Rocket, HPRC_GroundStation"]
+DEVICES_WE_CARE_ABOUT = ["HPRC_Rocket", "HPRC_GroundStation"]
 
 # Dictionary to store discovered devices
 discovered_devices = {}
 
+'''
 
-def send_data_to_device(local_device, remote_device, data):
+def send_data_to_device(local_device: XBeeDevice, remote_device: RemoteXBeeDevice, data: str) -> None:
 
     """
     Send data to a specific remote device asynchronously.
@@ -33,7 +32,7 @@ def send_data_to_device(local_device, remote_device, data):
 
         print(f"Error sending data to {remote_device.get_node_id()}: {e}")
 
-def deep_network_discovery(network, attempt=1, max_attempts=3):
+def deep_network_discovery(network, attempt=1, max_attempts=3) -> None:
 
     """
     Perform a deep network discovery. If not all devices are found, the method retries up to max_attempts.
@@ -73,7 +72,7 @@ def deep_network_discovery(network, attempt=1, max_attempts=3):
             for node_id, device in discovered_devices.items():
                 print(f"Found device: {node_id} - {device}")
 
-        elif attempt < max_attempts:
+        elif attempt <= max_attempts:
 
             print(f"Not all devices found in attempt {attempt}. Retrying...")
             deep_network_discovery(network, attempt + 1, max_attempts)
@@ -87,7 +86,7 @@ def deep_network_discovery(network, attempt=1, max_attempts=3):
 
         print(f"XBeeException occurred during discovery: {e}")
 
-        if attempt < max_attempts:
+        if attempt <= max_attempts:
 
             print(f"Retrying discovery (Attempt {attempt + 1} of {max_attempts})...")
             deep_network_discovery(network, attempt + 1, max_attempts)
@@ -97,11 +96,12 @@ def deep_network_discovery(network, attempt=1, max_attempts=3):
             print(f"Maximum attempts reached. Unable to complete discovery.")
             sys.exit(1)
 
-def device_discovered_callback(device):
+def device_discovered_callback(device: RemoteXBeeDevice):
 
     """ Callback for when a device is discovered. """
 
-    print(f"Device connected: {device.get_node_id()}")
+    print(f"Device discovered: {device.get_node_id()}")
+
 
 def modem_status_callback(status):
 
@@ -109,14 +109,21 @@ def modem_status_callback(status):
 
     print(f"Modem Status Update: {status}")
 
-def received_callback(xbee_message):
+def received_callback(xbee_message: XBeeMessage):
 
-    """ Callback for received data. """
+    """ Callback for received data. 
+        Args:
+        xbee_message (XBeeMessage): The message
+    
+    """
 
     address = xbee_message.remote_device.get_64bit_addr()
     data = xbee_message.data.decode("utf8")
 
-    print(f"Received data from {address}: {data}")
+    print(f"Received data from {xbee_message.remote_device.get_node_id()}: {data}")
+
+    if data == "unsubscribed":
+        send_data_to_device()
 
 def main():
 
@@ -125,13 +132,16 @@ def main():
     try:
 
         device.open()
-        device.add_data_received_callback(received_callback)
-        device.add_modem_status_received_callback(modem_status_callback)
 
         network = device.get_network()
         network.add_device_discovered_callback(device_discovered_callback)
 
         deep_network_discovery(network)
+
+        device.add_data_received_callback(received_callback)
+        device.add_modem_status_received_callback(modem_status_callback)
+
+        # DEVICES_WE_CARE_ABOUT.append(device)
 
         print("Listening for devices and ready to send data...\n")
 
@@ -162,7 +172,11 @@ def main():
 
         if device.is_open():
             device.close()
+'''
 
+def main():
+    device = Ground_Station_Device(PORT, BAUD_RATE, DEEP_SCAN_DURATION, DEVICES_WE_CARE_ABOUT)
+    device.run()
 
 if __name__ == '__main__':
     main()
