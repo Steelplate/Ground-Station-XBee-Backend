@@ -1,5 +1,6 @@
 from digi.xbee.devices import XBeeDevice, RemoteXBeeDevice, XBee64BitAddress, NeighborDiscoveryMode, XBeeException, XBeeMessage
 import time
+from watchdog import Watchdog
 
 class Ground_Station_Device:
 
@@ -13,7 +14,7 @@ class Ground_Station_Device:
 
         try:
             self.local_device.send_data_async(remote_device, data.encode())
-            print(f"Data sent to {remote_device.get_node_id()}")
+            print(f"Data sent to {remote_device.get_node_id()}: {data}")
 
         except XBeeException as e:
             print(f"Error sending data to {remote_device.get_node_id()}: {e}")
@@ -36,11 +37,9 @@ class Ground_Station_Device:
 
         print(f"Received data from {message.remote_device.get_node_id()}: {data}")
 
-        if data == "unsubscribed":
-            print(f"Device {message.remote_device.get_node_id()} is unsubscribed, sending subscription request")
-            self.send_data_to_device(message.remote_device, "subscribe")
+        self.watchdogs[message.remote_device.get_node_id()].reset()
 
-        elif data == "subscribed":
+        if data == "subscribed":
             print(f"Device {message.remote_device.get_node_id()} is now subscribed")
             self.subscribed_devices.append(message.remote_device)
 
@@ -62,9 +61,12 @@ class Ground_Station_Device:
 
         self.discovered_devices = {}
         self.subscribed_devices = []
+        self.watchdogs = {}
 
         self.local_device = None
         self.network = None
+
+        self.should_run = True
 
     def run(self):
         self.setup_device()
@@ -88,7 +90,6 @@ class Ground_Station_Device:
 
 
     def setup_device(self) -> None:
-
         self.local_device = XBeeDevice(self.port, self.baud_rate)
 
         try:
@@ -104,10 +105,10 @@ class Ground_Station_Device:
             self.local_device = None
     
     def setup_network(self) -> None:
-        network = self.local_device.get_network()
-        network.add_device_discovered_callback(self.device_discovered_callback)
-        network.set_deep_discovery_options(NeighborDiscoveryMode.FLOOD)
-        network.set_deep_discovery_timeouts(node_timeout=self.deep_scan_duration, time_bw_requests=1, time_bw_scans=0)
+        self.network = self.local_device.get_network()
+        self.network.add_device_discovered_callback(self.device_discovered_callback)
+        self.network.set_deep_discovery_options(NeighborDiscoveryMode.FLOOD)
+        self.network.set_deep_discovery_timeouts(node_timeout=self.deep_scan_duration, time_bw_requests=1, time_bw_scans=0)
 
     def do_deep_discovery_process(self) -> bool:
         self.network.start_discovery_process(deep=True, n_deep_scans=1)
@@ -124,6 +125,11 @@ class Ground_Station_Device:
             node_id = node.get_node_id()
             if node_id in self.devices_we_care_about:
                 self.discovered_devices[node_id] = node
+                self.send_data_to_device(node, "subscribe")
+
+                node_watchdog = Watchdog(1, lambda: self.send_data_to_device(node, "subscribe"))
+                self.watchdogs[node_id] = node_watchdog;
+
 
         # Check whether every device we care about has been found
         return all(device in self.discovered_devices for device in self.devices_we_care_about)
@@ -141,6 +147,7 @@ class Ground_Station_Device:
                 print(f"Exception in deep discovery: {e}")
 
             print(f"{'A' if all_devices_found else 'Not a'}ll devices were found in attempt {num_attempts + 1}, {'' if num_attempts < 3 else 'not '}retrying")
+            num_attempts += 1
 
         if not all_devices_found:
             return False
