@@ -42,7 +42,7 @@ class Ground_Station_Device:
             return
         
         self.websocket.run()
-        
+
         all_devices_found = self.deep_network_discovery()
         if not all_devices_found:
             print("Failed to find all devices")

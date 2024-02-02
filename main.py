@@ -14,8 +14,7 @@ def main():
     device.run()
 
     while True:
-        print("Still going")
-        time.sleep(5)
+        time.sleep(2)
 
 if __name__ == '__main__':
     main()

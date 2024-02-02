@@ -50,7 +50,7 @@ class WebSocket:
         
         while not self.should_stop:
             if(len(self._message_queue) > 0):
-                self._socket.send(self._message_queue.pop(0))
+                await self._socket.send(self._message_queue.pop(0))
 
         self.is_running = False
 

@@ -22,4 +22,7 @@ class CSV_Writer:
             self._has_written_headers = True
 
         else:
-            self.csv.writerow(data.json.values())
+            print(data_json.values())
+            self.csv.writerow(data_json.values())
+
+        self.file.flush()
