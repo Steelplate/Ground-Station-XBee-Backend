@@ -4,54 +4,6 @@ from watchdog import Watchdog
 
 class Ground_Station_Device:
 
-    def send_data_to_device(self, remote_device: RemoteXBeeDevice, data: str) -> None:
-        """
-        Send data to a specific remote device asynchronously.
-        Args:
-        remote_device (RemoteXBeeDevice): The remote XBee device to send data to.
-        data (str): The data to send.
-        """
-
-        try:
-            self.local_device.send_data_async(remote_device, data.encode())
-            print(f"Data sent to {remote_device.get_node_id()}: {data}")
-
-        except XBeeException as e:
-            print(f"Error sending data to {remote_device.get_node_id()}: {e}")
-
-    def device_discovered_callback(self, device: RemoteXBeeDevice):
-        print(f"Device discovered: {device.get_node_id()}")
-
-    def modem_status_callback(self, status):
-        """ Callback for modem status updates. """
-
-        print(f"Modem Status Update: {status}")
-
-    def data_received_callback(self, message: XBeeMessage):
-        """ Callback for received data. 
-            Args:
-            message (XBeeMessage): The message
-        
-        """
-        data = message.data.decode("utf8")
-
-        print(f"Received data from {message.remote_device.get_node_id()}: {data}")
-
-        self.watchdogs[message.remote_device.get_node_id()].reset()
-
-        if data == "subscribed":
-            print(f"Device {message.remote_device.get_node_id()} is now subscribed")
-            self.subscribed_devices.append(message.remote_device)
-
-            if len(self.subscribed_devices) == len(self.devices_we_care_about):
-                print("All devices are subscribed!")
-
-        else:
-            self.send_data_to_backend(data)
-
-    def send_data_to_backend(self, data: str):
-        pass
-
     def __init__(self, port: str, baud_rate: int, deep_scan_duration: int, devices_we_care_about: [str]):
         # Constants
         self.port = port
@@ -68,7 +20,9 @@ class Ground_Station_Device:
 
         self.should_run = True
 
-    def run(self):
+    # --- Device and network methods ---
+
+    def run(self) -> None:
         self.setup_device()
         if self.local_device == None:
             print("Unable to open the local device")
@@ -157,6 +111,56 @@ class Ground_Station_Device:
 
         return True
 
+
+    # --- Callbacks and utility methods ---
+
+    def send_data_to_device(self, remote_device: RemoteXBeeDevice, data: str) -> None:
+        """
+        Send data to a specific remote device asynchronously.
+        Args:
+        remote_device (RemoteXBeeDevice): The remote XBee device to send data to.
+        data (str): The data to send.
+        """
+
+        try:
+            self.local_device.send_data_async(remote_device, data.encode())
+            print(f"Data sent to {remote_device.get_node_id()}: {data}")
+
+        except XBeeException as e:
+            print(f"Error sending data to {remote_device.get_node_id()}: {e}")
+
+    def device_discovered_callback(self, device: RemoteXBeeDevice) -> None:
+        print(f"Device discovered: {device.get_node_id()}")
+
+    def modem_status_callback(self, status) -> None:
+        """ Callback for modem status updates. """
+
+        print(f"Modem Status Update: {status}")
+
+    def data_received_callback(self, message: XBeeMessage) -> None:
+        """ Callback for received data. 
+            Args:
+            message (XBeeMessage): The message
+        
+        """
+        data = message.data.decode("utf8")
+
+        print(f"Received data from {message.remote_device.get_node_id()}: {data}")
+
+        self.watchdogs[message.remote_device.get_node_id()].reset()
+
+        if data == "subscribed":
+            print(f"Device {message.remote_device.get_node_id()} is now subscribed")
+            self.subscribed_devices.append(message.remote_device)
+
+            if len(self.subscribed_devices) == len(self.devices_we_care_about):
+                print("All devices are subscribed!")
+
+        else:
+            self.send_data_to_backend(data)
+
+    def send_data_to_backend(self, data: str) -> None:
+        pass
 
 
 
