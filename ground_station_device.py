@@ -1,6 +1,10 @@
 from digi.xbee.devices import XBeeDevice, RemoteXBeeDevice, XBee64BitAddress, NeighborDiscoveryMode, XBeeException, XBeeMessage
 import time
 from watchdog import Watchdog
+from WebSocket import WebSocket
+import serial
+import sys
+from csv_writer import CSV_Writer
 
 class Ground_Station_Device:
 
@@ -20,6 +24,10 @@ class Ground_Station_Device:
 
         self.should_run = True
 
+        self.websocket = WebSocket("localhost", 8000)
+
+        self.csv_writer = CSV_Writer()
+
     # --- Device and network methods ---
 
     def run(self) -> None:
@@ -33,6 +41,8 @@ class Ground_Station_Device:
             print("Unable to setup the network")
             return
         
+        self.websocket.run()
+        
         all_devices_found = self.deep_network_discovery()
         if not all_devices_found:
             print("Failed to find all devices")
@@ -41,6 +51,7 @@ class Ground_Station_Device:
         print("All devices were found")
 
         self.local_device.add_data_received_callback(self.data_received_callback)
+
 
 
     def setup_device(self) -> None:
@@ -54,8 +65,12 @@ class Ground_Station_Device:
             self.local_device = None
             print(f"XBee Exception opening local device: {e}")
         
+        except serial.serialutil.SerialException:
+            print(f"XBee Device was not found at {self.port}")
+            sys.exit(1)
+
         except Exception as e:
-            print(f"Exception opening XBee Device: {e}")
+            print(f"Exception opening XBee Device: {e}, {type(e)}")
             self.local_device = None
     
     def setup_network(self) -> None:
@@ -157,10 +172,11 @@ class Ground_Station_Device:
                 print("All devices are subscribed!")
 
         else:
-            self.send_data_to_backend(data)
+            self.handle_data(data)
 
-    def send_data_to_backend(self, data: str) -> None:
-        pass
+    def handle_data(self, data: str) -> None:
+        self.csv_writer.write(data)
+        self.websocket.send_data(data)
 
 
 
