@@ -36,7 +36,7 @@ class WebSocket:
     async def _connect_socket(self) -> WebSocketClientProtocol:
         socket: WebSocketClientProtocol = None
         try:
-            socket = await websockets.connect(f"ws://{self.ip}:{self.port}", extra_headers={"backend-password": "PASSWORD"})
+            socket = await websockets.connect(f"wss://{self.ip}:{self.port}", extra_headers={"backend-password": "PASSWORD"})
         except Exception as e:
             print(type(e))
             print(e)
