@@ -8,18 +8,9 @@ BAUD_RATE = 115200  # Baud rate for local module
 
 DEEP_SCAN_DURATION = 20  # Duration for initial deep network discovery (in seconds)
 
-DEVICES_WE_CARE_ABOUT = ["HPRC_Rocket"]
+DEVICES_WE_CARE_ABOUT = ["HPRC_PAYLOAD"]
 
 def main():
-
-    s = WebSocket("hprc-test.entflammen.com", 8000)
-
-    s.run()
-
-    while True:
-        time.sleep(1)
-
-    return
     device = Ground_Station_Device(PORT, BAUD_RATE, DEEP_SCAN_DURATION, DEVICES_WE_CARE_ABOUT)
     device.run()
 

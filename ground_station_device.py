@@ -5,6 +5,8 @@ from WebSocket import WebSocket
 import serial
 import sys
 from csv_writer import CSV_Writer
+import struct
+from pprint import pprint
 
 class Ground_Station_Device:
 
@@ -24,7 +26,8 @@ class Ground_Station_Device:
 
         self.should_run = True
 
-        self.websocket = WebSocket("localhost", 8000)
+        self.websocket = WebSocket("hprc-test.entflammen.com", 8000)
+
 
         self.csv_writer = CSV_Writer()
 
@@ -43,6 +46,7 @@ class Ground_Station_Device:
         
         self.websocket.run()
 
+        """
         all_devices_found = self.deep_network_discovery()
         if not all_devices_found:
             print("Failed to find all devices")
@@ -50,6 +54,7 @@ class Ground_Station_Device:
         
         print("All devices were found")
 
+        """
         self.local_device.add_data_received_callback(self.data_received_callback)
 
 
@@ -94,10 +99,12 @@ class Ground_Station_Device:
             node_id = node.get_node_id()
             if node_id in self.devices_we_care_about:
                 self.discovered_devices[node_id] = node
+                """
                 self.send_data_to_device(node, "subscribe")
 
                 node_watchdog = Watchdog(1, lambda: self.send_data_to_device(node, "subscribe"))
-                self.watchdogs[node_id] = node_watchdog;
+                self.watchdogs[node_id] = node_watchdog
+                """
 
 
         # Check whether every device we care about has been found
@@ -115,7 +122,7 @@ class Ground_Station_Device:
             except XBeeException as e:
                 print(f"Exception in deep discovery: {e}")
 
-            print(f"{'A' if all_devices_found else 'Not a'}ll devices were found in attempt {num_attempts + 1}, {'' if num_attempts < 3 else 'not '}retrying")
+            # print(f"{"A' if all_devices_found else 'Not a'}ll devices were found in attempt {num_attempts + 1}, {"" if num_attempts < 3 else "not "}retrying")
             num_attempts += 1
 
         if not all_devices_found:
@@ -158,6 +165,7 @@ class Ground_Station_Device:
             message (XBeeMessage): The message
         
         """
+        """
         data = message.data.decode("utf8")
 
         print(f"Received data from {message.remote_device.get_node_id()}: {data}")
@@ -170,13 +178,60 @@ class Ground_Station_Device:
 
             if len(self.subscribed_devices) == len(self.devices_we_care_about):
                 print("All devices are subscribed!")
+"""
+        # else:
+        self.handle_data(message.data)
 
-        else:
-            self.handle_data(data)
+    def handle_data(self, data: bytearray) -> None:
+        format = "<fffffffffffffffffffffffffLB?Lxx"
 
-    def handle_data(self, data: str) -> None:
-        self.csv_writer.write(data)
-        self.websocket.send_data(data)
+        # print("Data: ", )
+
+        # print("Data size: ", len(data))
+        # print("Format size: ", struct.calcsize(format))
+
+        (
+            accelX,
+            accelY,
+            accelZ,
+            gyroX,
+            gyroY,
+            gyroZ,
+            magX,
+            magY,
+            magZ,
+            pressure,
+
+            altitude,
+
+            w,
+            i,
+            j,
+            k,
+            posX,
+            posY,
+            posZ,
+            velX,
+            velY,
+            velZ,
+
+            gpsLat,
+            gpsLong,
+            gpsAltMSL,
+            gpsAltAGL,
+
+            epochTime,
+            satellites,
+            gpsLock,
+            
+            timestamp
+        ) = struct.unpack(format, data)
+
+        jsonStr = \
+        f"""{{"accelX":{accelX},"accelY":{accelY},"accelZ":{accelZ},"gyroX":{gyroX},"gyroY":{gyroY},"gyroZ":{gyroZ},"magX":{magX},"magY":{magY},"magZ":{magZ},"pressure":{pressure},"altitude":{altitude},"w":{w},"i":{i},"j":{j},"k":{k},"posX":{posX},"posY":{posY},"posZ":{posZ},"velX":{velX},"velY":{velY},"velZ":{velZ},"gpsLat":{gpsLat},"gpsLong":{gpsLong},"gpsAltMSL":{gpsAltMSL},"gpsAltAGL":{gpsAltAGL},"epochTime":{epochTime},"satellites":{satellites},"gpsLock":{"true" if gpsLock else "false"},"timestamp":{timestamp} }}"""
+
+        self.csv_writer.write(jsonStr)
+        self.websocket.send_data(jsonStr)
 
 
 
