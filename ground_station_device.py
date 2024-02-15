@@ -7,6 +7,8 @@ import sys
 from csv_writer import CSV_Writer
 import struct
 from pprint import pprint
+import time
+
 class Ground_Station_Device:
 
     def __init__(self, port: str, baud_rate: int, deep_scan_duration: int, devices_we_care_about: [str]):
@@ -189,6 +191,7 @@ class Ground_Station_Device:
         # print("Data size: ", len(data))
         # print("Format size: ", struct.calcsize(format))
 
+        before = time.time_ns()
         (
             accelX,
             accelY,
@@ -228,6 +231,12 @@ class Ground_Station_Device:
 
         jsonStr = \
         f"""{{"accelX":{accelX},"accelY":{accelY},"accelZ":{accelZ},"gyroX":{gyroX},"gyroY":{gyroY},"gyroZ":{gyroZ},"magX":{magX},"magY":{magY},"magZ":{magZ},"pressure":{pressure},"altitude":{altitude},"w":{w},"i":{i},"j":{j},"k":{k},"posX":{posX},"posY":{posY},"posZ":{posZ},"velX":{velX},"velY":{velY},"velZ":{velZ},"gpsLat":{gpsLat},"gpsLong":{gpsLong},"gpsAltMSL":{gpsAltMSL},"gpsAltAGL":{gpsAltAGL},"epochTime":{epochTime},"satellites":{satellites},"gpsLock":{"true" if gpsLock else "false"},"timestamp":{timestamp} }}"""
+
+        after = time.time_ns()
+
+        deltaTime = after - before
+
+        print(f"Took {deltaTime} nanoseconds or {deltaTime / (10 ** 9)} seconds")
 
         self.csv_writer.write(jsonStr)
         self.websocket.send_data(jsonStr)
