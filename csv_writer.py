@@ -2,6 +2,7 @@ import csv
 import datetime
 import pathlib
 import json
+import time
 
 class CSV_Writer:
     def __init__(self):
@@ -18,10 +19,13 @@ class CSV_Writer:
 
         if not self._has_written_headers:
             header = data_json.keys()
+            header.append("internalEpochTime")
             self.csv.writerow(header)
             self._has_written_headers = True
 
         else:
+            data = data_json.values()
+            data.append(int(time.time()));
             self.csv.writerow(data_json.values())
 
         self.file.flush()

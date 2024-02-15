@@ -7,7 +7,6 @@ import sys
 from csv_writer import CSV_Writer
 import struct
 from pprint import pprint
-
 class Ground_Station_Device:
 
     def __init__(self, port: str, baud_rate: int, deep_scan_duration: int, devices_we_care_about: [str]):
